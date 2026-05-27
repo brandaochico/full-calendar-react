@@ -19,11 +19,16 @@ class HomeController extends Controller
             ->values();
 
         $colors = [
-            '#6A041D',
-            '#F5B841',
-            '#F4FF52',
-            '#53FF45',
-            '#1E2EDE',
+            '#B96A5B',
+            '#A97845',
+            '#9B8A3C',
+            '#7E9650',
+            '#5F8F73',
+            '#866EB8',
+            '#5D7FBA',
+            '#8A675C',
+            '#B26883',
+            '#C27A62',
         ];
 
         $employeesColors = [];
