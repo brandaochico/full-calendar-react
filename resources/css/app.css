@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+@plugin '@tailwindcss/forms';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+
+@theme {
+    --font-sans:
+        Figtree, ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+        "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+@layer base {
+    *,
+    ::after,
+    ::before,
+    ::backdrop,
+    ::file-selector-button {
+        border-color: var(--color-gray-200, currentcolor);
+    }
+}
+
+.fc {
+    --fc-border-color: var(--color-gray-200);
+    --fc-button-bg-color: var(--color-indigo-600);
+    --fc-button-border-color: var(--color-indigo-600);
+    --fc-button-hover-bg-color: var(--color-indigo-700);
+    --fc-button-hover-border-color: var(--color-indigo-700);
+    --fc-button-active-bg-color: var(--color-indigo-800);
+    --fc-button-active-border-color: var(--color-indigo-800);
+    --fc-today-bg-color: color-mix(in srgb, var(--color-indigo-100) 50%, white);
+}
+
+.fc .fc-toolbar-title {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+    font-weight: 600;
+    color: var(--color-gray-800);
+}
+
+.fc .fc-event {
+    border-radius: 0.375rem;
+    border: 0;
+    background-color: var(--color-indigo-500);
+    padding: 0.125rem 0.25rem;
+}
