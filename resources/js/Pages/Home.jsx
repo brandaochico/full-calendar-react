@@ -5,6 +5,7 @@ import { Head } from "@inertiajs/react";
 import { useState } from "react";
 
 export default function Home({ events }) {
+    // linking employee to their color
     const employeeToColor = events.reduce((acc, event) => {
         if (event.employee && event.backgroundColor) {
             acc[event.employee] = event.backgroundColor;
@@ -13,10 +14,8 @@ export default function Home({ events }) {
         return acc;
     }, {});
 
-    console.log(employeeToColor);
-
+    // employees that should not have their schedule shown on the calendar
     const [hiddenEmployees, setHiddenEmployees] = useState([]);
-
     function toggleEmployee(employee) {
         setHiddenEmployees((current) =>
             current.includes(employee)
@@ -24,6 +23,12 @@ export default function Home({ events }) {
                 : [...current, employee]
         );
     }
+
+    // adding isHidden prop to event in order to decrease opacity when employee is hidden
+    const calendarEvents = events.map((event) => ({
+        ...event,
+        isHidden: hiddenEmployees.includes(event.employee),
+    }));
 
     return (
         <AuthenticatedLayout>
@@ -59,7 +64,10 @@ export default function Home({ events }) {
                                     plugins={[timeGridPlugin]}
                                     initialView="timeGridWeek"
                                     slotDuration="00:15:00"
-                                    events={events}
+                                    events={calendarEvents}
+                                    eventDidMount={(info) => {
+                                        info.el.style.opacity = info.event.extendedProps.isHidden ? .25 : 1;
+                                    }}
                                     locale="pt-br"
                                     dayHeaderFormat={{
                                         weekday: 'long',
