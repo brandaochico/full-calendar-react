@@ -67,6 +67,7 @@ export default function Home({ events }) {
                                     events={calendarEvents}
                                     eventDidMount={(info) => {
                                         info.el.style.opacity = info.event.extendedProps.isHidden ? .25 : 1;
+                                        info.el.style.cursor = info.event.extendedProps.isHidden ? "not-allowed" : "pointer"
                                     }}
                                     locale="pt-br"
                                     dayHeaderFormat={{
