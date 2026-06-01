@@ -149,7 +149,7 @@ export default function Home({ events }) {
                             <div className="mt-4 flex justify-end">
                                 <button
                                     type="button"
-                                    className="rounded-md bg-gray-900 px-4 py-2 text-sm text-white"
+                                    className="rounded-md bg-gray-900 px-4 py-2 text-sm text-white cursor-pointer"
                                     onClick={closeModal}
                                 >
                                     Fechar
@@ -160,21 +160,21 @@ export default function Home({ events }) {
                             }`}>
                             <button
                                 type="button"
-                                className="rounded-md bg-gray-900 px-4 py-2 text-sm text-white"
+                                className="rounded-md bg-gray-900 px-4 py-2 text-sm text-white cursor-pointer"
                                 onClick={closeModal}
                             >
                                 Fechar
                             </button>
                             <button
                                 type="button"
-                                className="rounded-md bg-gray-900 px-4 py-2 text-sm text-white"
+                                className="rounded-md bg-gray-900 px-4 py-2 text-sm text-white cursor-pointer"
                                 onClick={closeModal}
                             >
                                 Fechar
                             </button>
                             <button
                                 type="button"
-                                className="rounded-md bg-gray-900 px-4 py-2 text-sm text-white"
+                                className="rounded-md bg-gray-900 px-4 py-2 text-sm text-white cursor-pointer"
                                 onClick={closeModal}
                             >
                                 Fechar
