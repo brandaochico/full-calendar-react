@@ -6,11 +6,27 @@ import { useState } from "react";
 
 export default function Home({ events }) {
     const [selectedEvent, setSelectedEvent] = useState(null);
+    const [modalVisible, setModalVisible] = useState(false);
     const [showActions, setShowActions] = useState(false);
+
+    function openModal(eventData) {
+        setSelectedEvent(eventData);
+        setModalVisible(false);
+        setShowActions(false);
+
+        requestAnimationFrame(() => {
+            setModalVisible(true);
+            setShowActions(true);
+        });
+    }
 
     function closeModal() {
         setShowActions(false);
-        setSelectedEvent(null);
+        setModalVisible(false);
+
+        setTimeout(() => {
+            setSelectedEvent(null);
+        }, 300);
     }
 
     // linking employee to their color
@@ -78,16 +94,12 @@ export default function Home({ events }) {
                                         info.el.style.cursor = info.event.extendedProps.isHidden ? "not-allowed" : "pointer"
                                     }}
                                     eventClick={(info) => {
-                                        setSelectedEvent({
+                                        openModal({
                                             title: info.event.title,
                                             start: info.event.start,
                                             end: info.event.end,
                                             employee: info.event.extendedProps.employee,
                                             backgroundColor: employeeToColor[info.event.extendedProps.employee],
-                                        });
-
-                                        requestAnimationFrame(() => {
-                                            setShowActions(true);
                                         });
                                     }}
                                     locale="pt-br"
@@ -112,12 +124,15 @@ export default function Home({ events }) {
 
             {selectedEvent &&
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-                    onClick={() => closeModal()}
+                    className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm
+                        transition-opacity duration-300 ${modalVisible ? "opacity-100" : "opacity-0"}`}
+                    onClick={closeModal}
                 >
                     <div className="flex gap-3">
                         <div
-                            className="z-100 w-[20vw] h-[50vh] max-w-md rounded-md p-6 shadow-lg flex flex-col justify-between"
+                            className={`w-[20vw] h-[50vh] max-w-md rounded-md p-6 shadow-lg
+                                flex flex-col justify-between
+                                transition-all duration-300 ${modalVisible ? "scale-100 opacity-100" : "scale-95 opacity-0"}`}
                             style={{ backgroundColor: selectedEvent.backgroundColor }}
                             onClick={(e) => e.stopPropagation()}
                         >
@@ -135,32 +150,32 @@ export default function Home({ events }) {
                                 <button
                                     type="button"
                                     className="rounded-md bg-gray-900 px-4 py-2 text-sm text-white"
-                                    onClick={() => closeModal()}
+                                    onClick={closeModal}
                                 >
                                     Fechar
                                 </button>
                             </div>
                         </div>
-                        <div className={`flex flex-col gap-2 transition-transform-all duration-500 ease-out ${showActions ? "translate-x-0 opactiy-100" : "-translate-x-6 opacity-0"
+                        <div className={`flex flex-col gap-2 transition-all duration-500 ease-out ${showActions ? "translate-x-0 opacity-100" : "-translate-x-6 opacity-0"
                             }`}>
                             <button
                                 type="button"
                                 className="rounded-md bg-gray-900 px-4 py-2 text-sm text-white"
-                                onClick={() => closeModal()}
+                                onClick={closeModal}
                             >
                                 Fechar
                             </button>
                             <button
                                 type="button"
                                 className="rounded-md bg-gray-900 px-4 py-2 text-sm text-white"
-                                onClick={() => closeModal()}
+                                onClick={closeModal}
                             >
                                 Fechar
                             </button>
                             <button
                                 type="button"
                                 className="rounded-md bg-gray-900 px-4 py-2 text-sm text-white"
-                                onClick={() => setSelectedEvent(null)}
+                                onClick={closeModal}
                             >
                                 Fechar
                             </button>
