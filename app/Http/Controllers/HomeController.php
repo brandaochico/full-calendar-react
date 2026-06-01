@@ -28,7 +28,8 @@ class HomeController extends Controller
             '#5D7FBA',
             '#8A675C',
             '#B26883',
-            '#C27A62',
+            '#D38A5D',
+            '#C89B47',
         ];
 
         $employeesColors = [];

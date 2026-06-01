@@ -55,11 +55,30 @@ export default function Home({ events }) {
         isHidden: hiddenEmployees.includes(event.employee),
     }));
 
+    // helpers
     function toTitleCase(text) {
         return text
             .split("-")
             .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
             .join("-");
+    }
+
+    function addDays(date, days) {
+        const nextDate = new Date(date);
+        nextDate.setDate(nextDate.getDate() + days);
+        return nextDate;
+    }
+
+    function addMonths(date, months) {
+        const nextDate = new Date(date);
+        nextDate.setMonth(nextDate.getMonth() + months);
+        return nextDate;
+    }
+
+    function startOfDay(date) {
+        const nextDate = new Date(date);
+        nextDate.setHours(0, 0, 0, 0);
+        return nextDate;
     }
 
     return (
@@ -139,6 +158,35 @@ export default function Home({ events }) {
                                     allDaySlot={false}
                                     scrollTime="8:00:00"
                                     height={700}
+                                    views={{
+                                        timeGridWeek: {
+                                            validRange(nowDate) {
+                                                const baseDate = startOfDay(nowDate);
+                                                return {
+                                                    start: addDays(baseDate, -14),
+                                                    end: addDays(baseDate, 15),
+                                                };
+                                            }
+                                        },
+                                        timeGridDay: {
+                                            validRange(nowDate) {
+                                                const baseDate = startOfDay(nowDate);
+                                                return {
+                                                    start: addDays(baseDate, -7),
+                                                    end: addDays(baseDate, 8),
+                                                };
+                                            }
+                                        },
+                                        dayGridMonth: {
+                                            validRange(nowDate) {
+                                                const baseDate = startOfDay(nowDate);
+                                                return {
+                                                    start: baseDate,
+                                                    end: addMonths(baseDate, 2),
+                                                };
+                                            }
+                                        }
+                                    }}
                                 />
                             </div>
                         </div>
