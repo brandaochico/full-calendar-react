@@ -5,6 +5,14 @@ import { Head } from "@inertiajs/react";
 import { useState } from "react";
 
 export default function Home({ events }) {
+    const [selectedEvent, setSelectedEvent] = useState(null);
+    const [showActions, setShowActions] = useState(false);
+
+    function closeModal() {
+        setShowActions(false);
+        setSelectedEvent(null);
+    }
+
     // linking employee to their color
     const employeeToColor = events.reduce((acc, event) => {
         if (event.employee && event.backgroundColor) {
@@ -69,6 +77,19 @@ export default function Home({ events }) {
                                         info.el.style.opacity = info.event.extendedProps.isHidden ? .25 : 1;
                                         info.el.style.cursor = info.event.extendedProps.isHidden ? "not-allowed" : "pointer"
                                     }}
+                                    eventClick={(info) => {
+                                        setSelectedEvent({
+                                            title: info.event.title,
+                                            start: info.event.start,
+                                            end: info.event.end,
+                                            employee: info.event.extendedProps.employee,
+                                            backgroundColor: employeeToColor[info.event.extendedProps.employee],
+                                        });
+
+                                        requestAnimationFrame(() => {
+                                            setShowActions(true);
+                                        });
+                                    }}
                                     locale="pt-br"
                                     dayHeaderFormat={{
                                         weekday: 'long',
@@ -88,6 +109,66 @@ export default function Home({ events }) {
                     </div>
                 </div>
             </div>
-        </AuthenticatedLayout>
+
+            {selectedEvent &&
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                    onClick={() => closeModal()}
+                >
+                    <div className="flex gap-3">
+                        <div
+                            className="z-100 w-[20vw] h-[50vh] max-w-md rounded-md p-6 shadow-lg flex flex-col justify-between"
+                            style={{ backgroundColor: selectedEvent.backgroundColor }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div>
+                                <h2 className="text-lg font-semibold text-white">{selectedEvent.employee}</h2>
+                                <p className="mt-2 text-sm text-gray-300">
+                                    Início: {selectedEvent.start.toLocaleString("pt-BR")}
+                                </p>
+                                <p className="mt-2 text-sm text-gray-300">
+                                    Fim: {selectedEvent.end.toLocaleString("pt-BR")}
+                                </p>
+                            </div>
+
+                            <div className="mt-4 flex justify-end">
+                                <button
+                                    type="button"
+                                    className="rounded-md bg-gray-900 px-4 py-2 text-sm text-white"
+                                    onClick={() => closeModal()}
+                                >
+                                    Fechar
+                                </button>
+                            </div>
+                        </div>
+                        <div className={`flex flex-col gap-2 transition-transform-all duration-500 ease-out ${showActions ? "translate-x-0 opactiy-100" : "-translate-x-6 opacity-0"
+                            }`}>
+                            <button
+                                type="button"
+                                className="rounded-md bg-gray-900 px-4 py-2 text-sm text-white"
+                                onClick={() => closeModal()}
+                            >
+                                Fechar
+                            </button>
+                            <button
+                                type="button"
+                                className="rounded-md bg-gray-900 px-4 py-2 text-sm text-white"
+                                onClick={() => closeModal()}
+                            >
+                                Fechar
+                            </button>
+                            <button
+                                type="button"
+                                className="rounded-md bg-gray-900 px-4 py-2 text-sm text-white"
+                                onClick={() => setSelectedEvent(null)}
+                            >
+                                Fechar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+
+        </AuthenticatedLayout >
     );
 }
