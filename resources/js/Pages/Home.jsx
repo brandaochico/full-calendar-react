@@ -1,6 +1,7 @@
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
+import dayGridPlugin from "@fullcalendar/daygrid";
 import { Head } from "@inertiajs/react";
 import { useState } from "react";
 
@@ -54,6 +55,13 @@ export default function Home({ events }) {
         isHidden: hiddenEmployees.includes(event.employee),
     }));
 
+    function toTitleCase(text) {
+        return text
+            .split("-")
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+            .join("-");
+    }
+
     return (
         <AuthenticatedLayout>
             <Head title="Home page" />
@@ -85,8 +93,26 @@ export default function Home({ events }) {
                         <div className="overflow-hidden bg-white shadow-xs sm:rounded-lg">
                             <div className="p-4 sm:p-6">
                                 <FullCalendar
-                                    plugins={[timeGridPlugin]}
+                                    plugins={[timeGridPlugin, dayGridPlugin]}
                                     initialView="timeGridWeek"
+                                    headerToolbar={{
+                                        left: "dayGridMonth,timeGridWeek,timeGridDay",
+                                        center: "title",
+                                        right: "today prev,next",
+                                    }}
+                                    dayHeaderContent={(args) => {
+                                        const weekday = new Intl.DateTimeFormat("pt-BR", {
+                                            weekday: "long",
+                                        }).format(args.date);
+
+                                        return toTitleCase(weekday);
+                                    }}
+                                    buttonText={{
+                                        today: "Hoje",
+                                        month: "Mês",
+                                        week: "Semana",
+                                        day: "Dia",
+                                    }}
                                     slotDuration="00:15:00"
                                     events={calendarEvents}
                                     eventDidMount={(info) => {
@@ -94,19 +120,17 @@ export default function Home({ events }) {
                                         info.el.style.cursor = info.event.extendedProps.isHidden ? "not-allowed" : "pointer"
                                     }}
                                     eventClick={(info) => {
-                                        openModal({
-                                            title: info.event.title,
-                                            start: info.event.start,
-                                            end: info.event.end,
-                                            employee: info.event.extendedProps.employee,
-                                            backgroundColor: employeeToColor[info.event.extendedProps.employee],
-                                        });
+                                        if (!hiddenEmployees.includes(info.event.extendedProps.employee)) {
+                                            openModal({
+                                                title: info.event.title,
+                                                start: info.event.start,
+                                                end: info.event.end,
+                                                employee: info.event.extendedProps.employee,
+                                                backgroundColor: employeeToColor[info.event.extendedProps.employee],
+                                            });
+                                        }
                                     }}
                                     locale="pt-br"
-                                    dayHeaderFormat={{
-                                        weekday: 'long',
-                                        day: 'numeric'
-                                    }}
                                     slotLabelFormat={{
                                         hour: '2-digit',
                                         minute: '2-digit',
