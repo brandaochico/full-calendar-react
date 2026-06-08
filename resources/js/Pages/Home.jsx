@@ -1,37 +1,102 @@
+import InputError from "@/Components/InputError";
+import TextInput from "@/Components/TextInput";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
-import { Head } from "@inertiajs/react";
-import { useCallback, useMemo, useState } from "react";
+import { Head, useForm } from "@inertiajs/react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+const modalSteps = {
+    createBlock: "create-block",
+    details: "details",
+};
+
+function formatTimeInput(value) {
+    const digits = value.replace(/\D/g, "").slice(0, 4);
+
+    if (digits.length <= 2) {
+        return digits;
+    }
+
+    return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+}
+
+function formatHourMinute(date) {
+    return new Intl.DateTimeFormat("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+    }).format(date);
+}
+
+function buildBlockDateTime(baseDate, time) {
+    if (!baseDate || !/^\d{2}:\d{2}$/.test(time)) {
+        return "";
+    }
+
+    const [hour, minute] = time.split(":");
+    const nextDate = new Date(baseDate);
+
+    nextDate.setHours(Number(hour), Number(minute), 0, 0);
+
+    return nextDate.toISOString();
+}
 
 export default function Home({ timeGridEvents, monthEvents }) {
     const [selectedEvent, setSelectedEvent] = useState(null);
     const [modalVisible, setModalVisible] = useState(false);
     const [showActions, setShowActions] = useState(false);
     const [currentView, setCurrentView] = useState("timeGridWeek");
-
-    function openModal(eventData) {
-        setSelectedEvent(eventData);
-        setModalVisible(false);
-        setShowActions(false);
-
-        requestAnimationFrame(() => {
-            setModalVisible(true);
-            setShowActions(true);
+    const [modalStep, setModalStep] = useState(modalSteps.details);
+    const [hiddenEmployees, setHiddenEmployees] = useState([]);
+    const {
+        data,
+        setData,
+        post,
+        processing,
+        errors,
+        reset,
+        clearErrors,
+        transform,
+    } =
+        useForm({
+            appointment_id: "",
+            start_time: "",
+            finish_time: "",
         });
-    }
 
-    function closeModal() {
+    const resetBlockForm = useCallback(() => {
+        reset();
+        clearErrors();
+    }, [clearErrors, reset]);
+
+    const openModal = useCallback(
+        (eventData) => {
+            setSelectedEvent(eventData);
+            setModalStep(modalSteps.details);
+            resetBlockForm();
+            setModalVisible(false);
+            setShowActions(false);
+
+            requestAnimationFrame(() => {
+                setModalVisible(true);
+                setShowActions(true);
+            });
+        },
+        [resetBlockForm],
+    );
+
+    const closeModal = useCallback(() => {
         setShowActions(false);
         setModalVisible(false);
+        setModalStep(modalSteps.details);
+        resetBlockForm();
 
         setTimeout(() => {
             setSelectedEvent(null);
         }, 300);
-    }
-
-    const [hiddenEmployees, setHiddenEmployees] = useState([]);
+    }, [resetBlockForm]);
 
     function toggleEmployee(employee) {
         setHiddenEmployees((current) =>
@@ -88,6 +153,18 @@ export default function Home({ timeGridEvents, monthEvents }) {
                 : visibleTimeGridEvents,
         [currentView, visibleMonthEvents, visibleTimeGridEvents],
     );
+
+    useEffect(() => {
+        const { overflow } = document.body.style;
+
+        if (selectedEvent) {
+            document.body.style.overflow = "hidden";
+        }
+
+        return () => {
+            document.body.style.overflow = overflow;
+        };
+    }, [selectedEvent]);
 
     function toTitleCase(text) {
         return text
@@ -213,12 +290,73 @@ export default function Home({ timeGridEvents, monthEvents }) {
                 openModal(buildModalData(info.event));
             }
         },
-        [buildModalData, hiddenEmployees],
+        [buildModalData, hiddenEmployees, openModal],
     );
 
     const handleDatesSet = useCallback((info) => {
         setCurrentView(info.view.type);
     }, []);
+
+    const openBlockForm = useCallback(() => {
+        if (!selectedEvent?.appointmentId) {
+            return;
+        }
+
+        resetBlockForm();
+        setData("appointment_id", String(selectedEvent.appointmentId));
+        setModalStep(modalSteps.createBlock);
+    }, [resetBlockForm, selectedEvent, setData]);
+
+    const handleBackToDetails = useCallback(() => {
+        resetBlockForm();
+        if (selectedEvent?.appointmentId) {
+            setData("appointment_id", String(selectedEvent.appointmentId));
+        }
+        setModalStep(modalSteps.details);
+    }, [resetBlockForm, selectedEvent, setData]);
+
+    const handleTimeFieldChange = useCallback(
+        (field, value) => {
+            setData(field, formatTimeInput(value));
+        },
+        [setData],
+    );
+
+    const submitBlockForm = useCallback(
+        (e) => {
+            e?.preventDefault();
+
+            if (!selectedEvent?.appointmentId) {
+                return;
+            }
+
+            transform((formData) => ({
+                ...formData,
+                start_at: buildBlockDateTime(
+                    selectedEvent.originalStart,
+                    formData.start_time,
+                ),
+                finish_at: buildBlockDateTime(
+                    selectedEvent.originalStart,
+                    formData.finish_time,
+                ),
+            }));
+
+            post(route("blocks.store"), {
+                preserveScroll: true,
+                preserveState: "errors",
+                onSuccess: () => {
+                    closeModal();
+                },
+            });
+        },
+        [closeModal, post, selectedEvent, transform],
+    );
+
+    const canCreateBlock = selectedEvent && selectedEvent.kind !== "block";
+    const originalAppointmentRange = selectedEvent
+        ? `${formatHourMinute(selectedEvent.originalStart)} - ${formatHourMinute(selectedEvent.originalEnd)}`
+        : "";
 
     return (
         <AuthenticatedLayout>
@@ -345,9 +483,12 @@ export default function Home({ timeGridEvents, monthEvents }) {
                     }`}
                     onClick={closeModal}
                 >
-                    <div className="flex gap-3">
+                    <div
+                        className="flex gap-3"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <div
-                            className={`flex h-[50vh] w-[20vw] max-w-md flex-col justify-between rounded-md p-6 shadow-lg transition-all duration-300 ${
+                            className={`flex h-[50vh] w-[24vw] max-w-lg flex-col justify-between rounded-md p-6 shadow-lg transition-all duration-300 ${
                                 modalVisible
                                     ? "scale-100 opacity-100"
                                     : "scale-95 opacity-0"
@@ -357,72 +498,182 @@ export default function Home({ timeGridEvents, monthEvents }) {
                             }}
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <div>
-                                <p className="text-sm font-medium text-white/70">
-                                    {selectedEvent.kind === "block"
-                                        ? "Bloqueio"
-                                        : "Consulta"}
-                                </p>
-                                <h2 className="text-lg font-semibold text-white">
-                                    {selectedEvent.client}
-                                </h2>
-                                <p className="mt-2 text-sm text-gray-300">
-                                    Profissional: {selectedEvent.employee}
-                                </p>
-                                {selectedEvent.blockLabel && (
-                                    <p className="mt-2 text-sm text-gray-300">
-                                        Rótulo do bloqueio:{" "}
-                                        {selectedEvent.blockLabel}
+                            {modalStep === modalSteps.details ? (
+                                <div>
+                                    <p className="text-sm font-medium text-white/70">
+                                        {selectedEvent.kind === "block"
+                                            ? "Bloqueio"
+                                            : "Consulta"}
                                     </p>
-                                )}
-                                {selectedEvent.kind ===
-                                    "appointment-month-summary" &&
-                                    selectedEvent.blockCount > 0 && (
+                                    <h2 className="text-lg font-semibold text-white">
+                                        {selectedEvent.client}
+                                    </h2>
+                                    <p className="mt-2 text-sm text-gray-300">
+                                        Profissional: {selectedEvent.employee}
+                                    </p>
+                                    {selectedEvent.blockLabel && (
                                         <p className="mt-2 text-sm text-gray-300">
-                                            Bloqueios vinculados:{" "}
-                                            {selectedEvent.blockLabels.join(
-                                                ", ",
-                                            )}
+                                            Rótulo do bloqueio:{" "}
+                                            {selectedEvent.blockLabel}
                                         </p>
                                     )}
-                                <p className="mt-2 text-sm text-gray-300">
-                                    Início:{" "}
-                                    {selectedEvent.start.toLocaleString(
-                                        "pt-BR",
+                                    {selectedEvent.kind ===
+                                        "appointment-month-summary" &&
+                                        selectedEvent.blockCount > 0 && (
+                                            <p className="mt-2 text-sm text-gray-300">
+                                                Bloqueios vinculados:{" "}
+                                                {selectedEvent.blockLabels.join(
+                                                    ", ",
+                                                )}
+                                            </p>
+                                        )}
+                                    <p className="mt-2 text-sm text-gray-300">
+                                        Início:{" "}
+                                        {selectedEvent.start.toLocaleString(
+                                            "pt-BR",
+                                        )}
+                                    </p>
+                                    <p className="mt-2 text-sm text-gray-300">
+                                        Fim:{" "}
+                                        {selectedEvent.end.toLocaleString(
+                                            "pt-BR",
+                                        )}
+                                    </p>
+                                    {selectedEvent.kind !== "block" && (
+                                        <>
+                                            <p className="mt-2 text-sm text-gray-300">
+                                                Consulta original:{" "}
+                                                {selectedEvent.originalStart.toLocaleString(
+                                                    "pt-BR",
+                                                )}
+                                            </p>
+                                            <p className="mt-2 text-sm text-gray-300">
+                                                Término original:{" "}
+                                                {selectedEvent.originalEnd.toLocaleString(
+                                                    "pt-BR",
+                                                )}
+                                            </p>
+                                        </>
                                     )}
-                                </p>
-                                <p className="mt-2 text-sm text-gray-300">
-                                    Fim:{" "}
-                                    {selectedEvent.end.toLocaleString("pt-BR")}
-                                </p>
-                                {selectedEvent.kind !== "block" && (
-                                    <>
-                                        <p className="mt-2 text-sm text-gray-300">
-                                            Consulta original:{" "}
-                                            {selectedEvent.originalStart.toLocaleString(
-                                                "pt-BR",
-                                            )}
-                                        </p>
-                                        <p className="mt-2 text-sm text-gray-300">
-                                            Término original:{" "}
-                                            {selectedEvent.originalEnd.toLocaleString(
-                                                "pt-BR",
-                                            )}
-                                        </p>
-                                    </>
-                                )}
-                            </div>
-
-                            <div className="mt-4 flex justify-end">
-                                <button
-                                    type="button"
-                                    className="cursor-pointer rounded-md bg-gray-900 px-4 py-2 text-sm text-white"
-                                    onClick={closeModal}
+                                </div>
+                            ) : (
+                                <form
+                                    className="flex h-full flex-col justify-between"
+                                    onSubmit={submitBlockForm}
                                 >
-                                    Fechar
-                                </button>
-                            </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-white/70">
+                                            Novo bloqueio
+                                        </p>
+                                        <h2 className="text-lg font-semibold text-white">
+                                            {selectedEvent.client}
+                                        </h2>
+                                        <p className="mt-2 text-sm text-gray-300">
+                                            Janela disponível:{" "}
+                                            {originalAppointmentRange}
+                                        </p>
+                                        <p className="mt-1 text-sm text-gray-300">
+                                            Digite apenas números e o campo será
+                                            formatado como hh:mm.
+                                        </p>
+
+                                        <div className="mt-6 grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label
+                                                    className="text-sm font-medium text-white"
+                                                    htmlFor="block-start-time"
+                                                >
+                                                    Hora inicial
+                                                </label>
+                                                <TextInput
+                                                    id="block-start-time"
+                                                    name="start_time"
+                                                    value={data.start_time}
+                                                    placeholder="--:--"
+                                                    inputMode="numeric"
+                                                    autoComplete="off"
+                                                    isFocused={
+                                                        modalStep ===
+                                                        modalSteps.createBlock
+                                                    }
+                                                    className="mt-2 block w-full bg-white/90 text-gray-900 placeholder:text-gray-400"
+                                                    maxLength={5}
+                                                    onChange={(e) =>
+                                                        handleTimeFieldChange(
+                                                            "start_time",
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                />
+                                                <InputError
+                                                    message={errors.start_time}
+                                                    className="mt-2 text-red-200"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label
+                                                    className="text-sm font-medium text-white"
+                                                    htmlFor="block-finish-time"
+                                                >
+                                                    Hora final
+                                                </label>
+                                                <TextInput
+                                                    id="block-finish-time"
+                                                    name="finish_time"
+                                                    value={data.finish_time}
+                                                    placeholder="--:--"
+                                                    inputMode="numeric"
+                                                    autoComplete="off"
+                                                    className="mt-2 block w-full bg-white/90 text-gray-900 placeholder:text-gray-400"
+                                                    maxLength={5}
+                                                    onChange={(e) =>
+                                                        handleTimeFieldChange(
+                                                            "finish_time",
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                />
+                                                <InputError
+                                                    message={errors.finish_time}
+                                                    className="mt-2 text-red-200"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-6 flex justify-end gap-3">
+                                        <button
+                                            type="button"
+                                            className="cursor-pointer rounded-md bg-white/15 px-4 py-2 text-sm text-white"
+                                            onClick={handleBackToDetails}
+                                        >
+                                            Voltar
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            className="cursor-pointer rounded-md bg-gray-900 px-4 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-60"
+                                            disabled={processing}
+                                        >
+                                            Salvar bloqueio
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
+
+                            {modalStep === modalSteps.details && (
+                                <div className="mt-4 flex justify-end">
+                                    <button
+                                        type="button"
+                                        className="cursor-pointer rounded-md bg-gray-900 px-4 py-2 text-sm text-white"
+                                        onClick={closeModal}
+                                    >
+                                        Fechar
+                                    </button>
+                                </div>
+                            )}
                         </div>
+
                         <div
                             className={`flex flex-col gap-2 transition-all duration-500 ease-out ${
                                 showActions
@@ -430,20 +681,37 @@ export default function Home({ timeGridEvents, monthEvents }) {
                                     : "-translate-x-6 opacity-0"
                             }`}
                         >
-                            <button
-                                type="button"
-                                className="cursor-pointer rounded-md bg-gray-900 px-4 py-2 text-sm text-white"
-                                onClick={closeModal}
-                            >
-                                Fechar
-                            </button>
-                            <button
-                                type="button"
-                                className="cursor-pointer rounded-md bg-gray-900 px-4 py-2 text-sm text-white"
-                                onClick={closeModal}
-                            >
-                                Fechar
-                            </button>
+                            {modalStep === modalSteps.details &&
+                                canCreateBlock && (
+                                    <button
+                                        type="button"
+                                        className="cursor-pointer rounded-md bg-gray-900 px-4 py-2 text-sm text-white"
+                                        onClick={openBlockForm}
+                                    >
+                                        Bloquear Horário
+                                    </button>
+                                )}
+
+                            {modalStep === modalSteps.createBlock && (
+                                <>
+                                    <button
+                                        type="button"
+                                        className="cursor-pointer rounded-md bg-white/15 px-4 py-2 text-sm text-white"
+                                        onClick={handleBackToDetails}
+                                    >
+                                        Voltar
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="cursor-pointer rounded-md bg-gray-900 px-4 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-60"
+                                        disabled={processing}
+                                        onClick={submitBlockForm}
+                                    >
+                                        Salvar bloqueio
+                                    </button>
+                                </>
+                            )}
+
                             <button
                                 type="button"
                                 className="cursor-pointer rounded-md bg-gray-900 px-4 py-2 text-sm text-white"

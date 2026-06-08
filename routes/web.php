@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BlockController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserController;
@@ -10,6 +11,7 @@ Route::get('/', HomeController::class)->name('home');
 Route::get('users', [UserController::class, 'index'])->name('users.index');
 
 Route::middleware('auth')->group(function () {
+    Route::post('/blocks', [BlockController::class, 'store'])->name('blocks.store');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
