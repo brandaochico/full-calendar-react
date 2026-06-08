@@ -5,18 +5,18 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Appointment extends Model
+class Block extends Model
 {
     use HasFactory;
 
+    protected $table = 'bloqueios';
+
     protected $fillable = [
+        'appointment_id',
         'start_time',
         'finish_time',
-        'comments',
-        'client_id',
-        'employee_id',
+        'label',
     ];
 
     protected function casts(): array
@@ -27,18 +27,8 @@ class Appointment extends Model
         ];
     }
 
-    public function client(): BelongsTo
+    public function appointment(): BelongsTo
     {
-        return $this->belongsTo(Client::class);
-    }
-
-    public function employee(): BelongsTo
-    {
-        return $this->belongsTo(Employee::class);
-    }
-
-    public function blocks(): HasMany
-    {
-        return $this->hasMany(Block::class);
+        return $this->belongsTo(Appointment::class);
     }
 }
